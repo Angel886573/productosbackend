@@ -15,7 +15,8 @@ app.use(cors({
     origin: [
         'http://localhost:5173',
         'http://localhost:4000',
-        process.env.BASE_URL
+        process.env.BASE_URL_BACKEND,
+        process.env.BASE_URL_FRONTEND
     ] ,
     credentials:true
 }));
@@ -27,5 +28,15 @@ app.use(express.urlencoded( { extended: false }));
 //Indicamos que el servidor utilice el objeto authRoutes
 app.use('/api/', authRoutes);
 app.use('/api/', productRoutes);
+app.get("/", (req, res) => {
+    res.json({
+        message: "Bienvenido al API REST de productos",
+        version: "1.0.0",
+        rutasDisponibles: [
+            { endpoint: "/api/register", method:"POST", description: "Crea un nuevo usuario"},
+            { endpoint: "/api/login", method:"POST", description: "Iniciar sesion"}
+        ]
+    });
+});
 
 export default app;
