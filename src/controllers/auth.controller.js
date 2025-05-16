@@ -4,6 +4,13 @@ import bcryptjs from "bcryptjs";
 import { createAccessToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
 import { TOKEN_SECRET } from "../config.js";
+import Role from '../models/roles.models.js';
+import dotenv from 'dotenv';
+
+//Configuramos las variables de entorno
+dotenv.config();
+const roleAdmin=process.env.SETUP_ROLE_ADMIN;
+const roleUser=process.env.SETUP_ROLE_USER;
 
 // Funcion para registrar usuarios
 export const register = async (req, res) => {
@@ -18,27 +25,38 @@ export const register = async (req, res) => {
         .json({ message: ["El email ya esta registrado"] });
     }
     const passwordHash = await bcryptjs.hash(password, 10);
+
+    const role = await Role.findOne({role: roleUser});
+
     const newUser = new User({
       username,
       email,
       password: passwordHash,
+      role: role._id
     });
-
     const userSaved = await newUser.save();
     const token = await createAccessToken({ id: userSaved._id });
-    res.cookie("token", token, {
-      sameSite: "none", //para indicar que el back y el front estan en distintos servidores
-      secure: true //Activamos esta opcion cuando hagamos el deployment, para que funciones el https
+    if (process.env.ENVIRONMENT=="local"){
+      res.cookie("token", token, {
+      sameSite: "lax", //Para indicar que el back y el front son locales
     });
+  }
+  else{
+    res.cookie("token", token, {
+      sameSite: "none",  //Para peticiones remotas
+      secure: true,   //Para activar https en render (deployment)
+    }); 
+  }
     res.json({
       id: userSaved._id,
       username: userSaved.username,
       email: userSaved.email,
+      isAdmin: false
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}; //fin de resiter
+}; //Fin de register
 
 //Funcion para iniciar sesion
 export const login = async (req, res) => {
@@ -54,23 +72,38 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: ["Password no coincide"] });
     }
     const token = await createAccessToken({ id: userFound._id });
-    res.cookie("token", token, {
-      sameSite: "none", //para indicar que el back y el front estan en distintos servidores
-      secure: true //Activamos esta opcion cuando hagamos el deployment, para que funciones el https
+    if (process.env.ENVIRONMENT=="local"){
+      res.cookie("token", token, {
+      sameSite: "lax", //Para indicar que el back y el front son locales
     });
+  }
+  else{
+    res.cookie("token", token, {
+      sameSite: "none",  //Para peticiones remotas
+      secure: true,   //Para activar https en render (deployment)
+    }); 
+  }; //Fin del else (process.env.ENVIRONMENT)
+
+  const role = await Role.findOne({role: roleAdmin})
+  let isAdmin = false;
+  if (role.equals(userFound.role))
+       isAdmin = true;
+
     res.json({
       id: userFound._id,
       username: userFound.username,
       email: userFound.email,
+      isAdmin: isAdmin
     });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: error.message });
   }
 }; //fin de login
 
 //Funcion para cerrar sesion
 export const logout = (req, res) => {
-  res.Cookie("token", "", {
+  res.cookie("token", "", {
     expires: new Date(0)
   });
   return res.sendStatus(200);
@@ -99,18 +132,25 @@ export const verifyToken = async (req, res) => {
 
   jwt.verify(token, TOKEN_SECRET, async (err, user) => {
     if (err) {
-      return res.status(401).json({ message: ["No autorizado"] });
+      return res.status(401)
+                          .json({ message: ["No autorizado"] });
     }
 
     const userFound = await User.findById(user.id);
-    if (!userFound) {
-      return res.status(401).json({ message: ["No autorizado"] });
-    }
-
+    if (!userFound) 
+      return res.status(401)
+                           .json({ message: ["No autorizado"] });
+      
+     const role = await Role.findOne({role: roleAdmin})
+     let isAdmin = false;
+     if (role.equals(userFound.role))
+      isAdmin = true;
+    
     return res.json({
       id: userFound._id,
       username: userFound.username,
       email: userFound.email,
+      isAdmin: isAdmin
     });
-  });
-};
+  }); //Fin de jwt.verifyToken
+};//Fin del verifyToken

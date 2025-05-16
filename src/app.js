@@ -8,6 +8,8 @@ import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
 //Importamos las rutas para productos
 import productRoutes from './routes/products.routes.js';
+//Importamos las rutas para las ordnes
+import orderRoutes from './routes/order.routes.js';
 
 const app = express();
 
@@ -28,6 +30,9 @@ app.use(express.urlencoded( { extended: false }));
 //Indicamos que el servidor utilice el objeto authRoutes
 app.use('/api/', authRoutes);
 app.use('/api/', productRoutes);
+app.use('/api/', orderRoutes);
+
+//ruta principal del api
 app.get("/", (req, res) => {
     res.json({
         message: "Bienvenido al API REST de productos",

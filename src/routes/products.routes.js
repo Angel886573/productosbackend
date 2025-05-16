@@ -2,6 +2,7 @@ import { Router } from  'express';
 import { authRequired } from '../middlewares/validaToken.middleware.js';
 import {
     getProducts,
+    getAllProducts,
     createProduct,
     getProduct,
     deleteProduct,
@@ -43,5 +44,8 @@ router.put('/products/:id', authRequired, updateProduct);
 
 //Ruta para actualizar un producto y CAMBIAR LA IMAGEN
 router.put('/productupdatewithimage/:id', authRequired, upload.single('image'), validateSchema(productSchema), updateProductWithImage);
+
+//Ruta para obtener todos los productos de la compra 
+router.get('/getAllProducts', authRequired, getAllProducts);
 
 export default router;

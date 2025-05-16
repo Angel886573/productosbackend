@@ -1,6 +1,8 @@
 import Products from '../models/products.models.js';
 import cloudinary from 'cloudinary';
 
+
+
 // Obtener todos los productos
 export const getProducts = async (req, res) => {
     try {
@@ -154,4 +156,15 @@ export const updateProductWithImage = async (req, res) => {
         console.log(error);
         res.status(500).json({ message: ['Error al actualizar un producto'] });
     }
-};
+
+} //Fin de updateProduct
+
+//Funcion para obtener todos los productos para la compra de productos
+export const getAllProducts = async (req, res) => {
+  try {
+    const products = await Products.find();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: ['Error al obtener productos'] });
+  }
+}//Fin del getAllProducts

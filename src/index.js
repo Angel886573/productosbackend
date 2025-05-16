@@ -2,6 +2,7 @@ import app from './app.js';
 import { connectDB } from './db.js';
 import dotenv from 'dotenv';
 import { v2 as cloudinary } from 'cloudinary';
+import { initializeSetup } from './libs/initialSetup.js';
 
 
 //Configuramos la lectura de variables de entorno
@@ -9,6 +10,8 @@ import { v2 as cloudinary } from 'cloudinary';
 dotenv.config();
 
 connectDB();
+
+initializeSetup();
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
