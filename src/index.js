@@ -15,11 +15,6 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-export const initializeSetup = async () => {
-  console.log("Inicializando setup de roles y admin..."); // ← agrega esto
-
-  // resto de tu lógica...
-}
 // Función principal de inicio
 const startServer = async () => {
     try {
