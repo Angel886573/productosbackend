@@ -1,11 +1,11 @@
-// Importamos modelos y librerías
+//Importamos el modelo de datos
 import User from "../models/user.models.js";
 import bcryptjs from "bcryptjs";
 import { createAccessToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
 import { TOKEN_SECRET } from "../config.js";
-import Role from "../models/roles.models.js";
-import dotenv from "dotenv";
+import Role from '../models/roles.models.js';
+import dotenv from 'dotenv';
 
 dotenv.config();
 const roleAdmin = process.env.SETUP_ROLE_ADMIN;
@@ -17,9 +17,7 @@ export const register = async (req, res) => {
   try {
     const userFound = await User.findOne({ email });
     if (userFound) {
-      return res
-        .status(400)
-        .json({ message: ["El email ya está registrado"] });
+      return res.status(400).json({ message: ["El email ya está registrado"] });
     }
 
     const passwordHash = await bcryptjs.hash(password, 10);
@@ -29,13 +27,12 @@ export const register = async (req, res) => {
       username,
       email,
       password: passwordHash,
-      role: role._id,
+      role: role._id
     });
 
     const userSaved = await newUser.save();
     const token = await createAccessToken({ id: userSaved._id });
 
-    // Cookie con httpOnly
     if (process.env.ENVIRONMENT === "local") {
       res.cookie("token", token, {
         sameSite: "lax",
@@ -53,7 +50,7 @@ export const register = async (req, res) => {
       id: userSaved._id,
       username: userSaved.username,
       email: userSaved.email,
-      isAdmin: false,
+      isAdmin: false
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -89,17 +86,14 @@ export const login = async (req, res) => {
       });
     }
 
-    let isAdmin = false;
     const role = await Role.findOne({ role: roleAdmin });
-    if (role && userFound.role && role.equals(userFound.role)) {
-      isAdmin = true;
-    }
+    const isAdmin = userFound.role?.toString() === role?._id?.toString();
 
     res.json({
       id: userFound._id,
       username: userFound.username,
       email: userFound.email,
-      isAdmin,
+      isAdmin: isAdmin
     });
   } catch (error) {
     console.log(error);
@@ -111,12 +105,12 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
   res.cookie("token", "", {
     expires: new Date(0),
-    httpOnly: true,
+    httpOnly: true
   });
   return res.sendStatus(200);
 };
 
-// Perfil de usuario autenticado
+// Perfil del usuario autenticado
 export const profile = async (req, res) => {
   const userFound = await User.findById(req.user.id);
 
@@ -130,7 +124,7 @@ export const profile = async (req, res) => {
   });
 };
 
-// Verificación de token
+// Verificación del token
 export const verifyToken = async (req, res) => {
   const { token } = req.cookies;
   if (!token) {
@@ -146,17 +140,14 @@ export const verifyToken = async (req, res) => {
     if (!userFound)
       return res.status(401).json({ message: ["No autorizado"] });
 
-    let isAdmin = false;
     const role = await Role.findOne({ role: roleAdmin });
-    if (role && userFound.role && role.equals(userFound.role)) {
-      isAdmin = true;
-    }
+    const isAdmin = userFound.role?.toString() === role?._id?.toString();
 
     return res.json({
       id: userFound._id,
       username: userFound.username,
       email: userFound.email,
-      isAdmin,
+      isAdmin: isAdmin
     });
   });
 };
