@@ -1,11 +1,11 @@
-//Importamos el modelo de datos
+// Importaciones necesarias
 import User from "../models/user.models.js";
 import bcryptjs from "bcryptjs";
 import { createAccessToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
 import { TOKEN_SECRET } from "../config.js";
-import Role from '../models/roles.models.js';
-import dotenv from 'dotenv';
+import Role from "../models/roles.models.js";
+import dotenv from "dotenv";
 
 dotenv.config();
 const roleAdmin = process.env.SETUP_ROLE_ADMIN;
@@ -37,6 +37,7 @@ export const register = async (req, res) => {
     const userSaved = await newUser.save();
     const token = await createAccessToken({ id: userSaved._id });
 
+    // Cookie con httpOnly
     res.cookie("token", token, {
       sameSite: process.env.ENVIRONMENT === "local" ? "lax" : "none",
       secure: process.env.ENVIRONMENT !== "local",
@@ -58,7 +59,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const userFound = await User.findOne({ email });
+    const userFound = await User.findOne({ email }).populate("role");
     if (!userFound) {
       return res.status(400).json({ message: ["Usuario no encontrado"] });
     }
@@ -70,16 +71,14 @@ export const login = async (req, res) => {
 
     const token = await createAccessToken({ id: userFound._id });
 
+    // Cookie con httpOnly
     res.cookie("token", token, {
       sameSite: process.env.ENVIRONMENT === "local" ? "lax" : "none",
       secure: process.env.ENVIRONMENT !== "local",
       httpOnly: true,
     });
 
-    const roleAdminDoc = await Role.findOne({ role: roleAdmin });
-    const isAdmin =
-      roleAdminDoc &&
-      userFound.role?.toString() === roleAdminDoc._id.toString();
+    const isAdmin = userFound.role?.role === roleAdmin;
 
     res.json({
       id: userFound._id,
@@ -88,7 +87,7 @@ export const login = async (req, res) => {
       isAdmin
     });
   } catch (error) {
-    console.log("Error en login:", error);
+    console.log(error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -104,14 +103,18 @@ export const logout = (req, res) => {
 
 // Perfil del usuario autenticado
 export const profile = async (req, res) => {
-  const userFound = await User.findById(req.user.id);
+  const userFound = await User.findById(req.user.id).populate("role");
+
   if (!userFound)
     return res.status(400).json({ message: ["Usuario no encontrado"] });
+
+  const isAdmin = userFound.role?.role === roleAdmin;
 
   return res.json({
     id: userFound._id,
     username: userFound.username,
     email: userFound.email,
+    isAdmin
   });
 };
 
@@ -123,14 +126,11 @@ export const verifyToken = async (req, res) => {
   jwt.verify(token, TOKEN_SECRET, async (err, user) => {
     if (err) return res.status(401).json({ message: ["No autorizado"] });
 
-    const userFound = await User.findById(user.id);
+    const userFound = await User.findById(user.id).populate("role");
     if (!userFound)
       return res.status(401).json({ message: ["No autorizado"] });
 
-    const roleAdminDoc = await Role.findOne({ role: roleAdmin });
-    const isAdmin =
-      roleAdminDoc &&
-      userFound.role?.toString() === roleAdminDoc._id.toString();
+    const isAdmin = userFound.role?.role === roleAdmin;
 
     return res.json({
       id: userFound._id,
@@ -140,3 +140,4 @@ export const verifyToken = async (req, res) => {
     });
   });
 };
+
