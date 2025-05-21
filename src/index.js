@@ -15,20 +15,24 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+export const initializeSetup = async () => {
+  console.log("Inicializando setup de roles y admin..."); // ← agrega esto
+
+  // resto de tu lógica...
+}
 // Función principal de inicio
 const startServer = async () => {
     try {
         await connectDB();         // Conectar a MongoDB
         await initializeSetup();   // Inicializar roles y admin si es necesario
-
         const PORT = process.env.PORT || 4000;
         app.listen(PORT, () => {
             console.log(`Servidor corriendo en el puerto ${PORT}`);
         });
+        
     } catch (error) {
         console.error('Error iniciando el servidor:', error);
         process.exit(1); // Termina la app si falla la inicialización
     }
 };
-
 startServer();

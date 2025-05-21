@@ -15,15 +15,17 @@ export const initializeSetup = async () => {
         new Role({ role: roleUser }).save(),
         new Role({ role: roleAdmin }).save()
       ]);
+      console.log("Roles creados");
     }
 
     const setupAdminName = process.env.SETUP_ADMIN_USERNAME;
     const setupPwd = process.env.SETUP_ADMIN_PWD;
     const setupEmail = process.env.SETUP_ADMIN_EMAIL;
 
-    const userAdmin = await User.findOne({ username: setupAdminName });
+    // buscar por email
+    const userAdmin = await User.findOne({ email: setupEmail });
     if (!userAdmin) {
-      const roleAdminDoc = await Role.findOne({ role: 'admin' });
+      const roleAdminDoc = await Role.findOne({ role: roleAdmin });
       const passwordAdmin = await bcryptjs.hash(setupPwd, 10);
       const newUserAdmin = new User({
         username: setupAdminName,
@@ -32,9 +34,11 @@ export const initializeSetup = async () => {
         role: roleAdminDoc._id
       });
       await newUserAdmin.save();
-      console.log("Roles y usuarios inicializado");
+      console.log("Usuario administrador creado correctamente");
+    } else {
+      console.log("ℹEl usuario administrador ya existe");
     }
   } catch (error) {
-    console.log(error);
+    console.error("Error inicializando el admin:", error);
   }
 };
