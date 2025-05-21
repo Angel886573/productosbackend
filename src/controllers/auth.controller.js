@@ -1,4 +1,3 @@
-//Importamos el modelo de datos
 import User from "../models/user.models.js";
 import bcryptjs from "bcryptjs";
 import { createAccessToken } from "../libs/jwt.js";
@@ -37,7 +36,6 @@ export const register = async (req, res) => {
     const userSaved = await newUser.save();
     const token = await createAccessToken({ id: userSaved._id });
 
-    // Cookie con httpOnly
     res.cookie("token", token, {
       sameSite: process.env.ENVIRONMENT === "local" ? "lax" : "none",
       secure: process.env.ENVIRONMENT !== "local",
@@ -71,7 +69,6 @@ export const login = async (req, res) => {
 
     const token = await createAccessToken({ id: userFound._id });
 
-    // Cookie con httpOnly
     res.cookie("token", token, {
       sameSite: process.env.ENVIRONMENT === "local" ? "lax" : "none",
       secure: process.env.ENVIRONMENT !== "local",
@@ -79,7 +76,12 @@ export const login = async (req, res) => {
     });
 
     const role = await Role.findOne({ role: roleAdmin });
-    const isAdmin = role && userFound.role.toString() === role._id.toString();
+
+    // Logs de depuración
+    console.log("LOGIN — userFound.role:", userFound.role?.toString());
+    console.log("LOGIN — role._id (admin):", role?._id?.toString());
+
+    const isAdmin = role && userFound.role?.toString() === role._id?.toString();
 
     res.json({
       id: userFound._id,
@@ -128,7 +130,12 @@ export const verifyToken = async (req, res) => {
       return res.status(401).json({ message: ["No autorizado"] });
 
     const role = await Role.findOne({ role: roleAdmin });
-    const isAdmin = role && userFound.role.toString() === role._id.toString();
+
+    // Logs de depuración
+    console.log("VERIFY — userFound.role:", userFound.role?.toString());
+    console.log("VERIFY — role._id (admin):", role?._id?.toString());
+
+    const isAdmin = role && userFound.role?.toString() === role._id?.toString();
 
     return res.json({
       id: userFound._id,
@@ -138,3 +145,4 @@ export const verifyToken = async (req, res) => {
     });
   });
 };
+
