@@ -23,6 +23,10 @@ export const register = async (req, res) => {
     const passwordHash = await bcryptjs.hash(password, 10);
     const role = await Role.findOne({ role: roleUser });
 
+    if (!role) {
+      return res.status(500).json({ message: "No se encontró el rol de usuario." });
+    }
+
     const newUser = new User({
       username,
       email,
@@ -33,18 +37,12 @@ export const register = async (req, res) => {
     const userSaved = await newUser.save();
     const token = await createAccessToken({ id: userSaved._id });
 
-    if (process.env.ENVIRONMENT === "local") {
-      res.cookie("token", token, {
-        sameSite: "lax",
-        httpOnly: true,
-      });
-    } else {
-      res.cookie("token", token, {
-        sameSite: "none",
-        secure: true,
-        httpOnly: true,
-      });
-    }
+    // Cookie con httpOnly
+    res.cookie("token", token, {
+      sameSite: process.env.ENVIRONMENT === "local" ? "lax" : "none",
+      secure: process.env.ENVIRONMENT !== "local",
+      httpOnly: true,
+    });
 
     res.json({
       id: userSaved._id,
@@ -73,27 +71,21 @@ export const login = async (req, res) => {
 
     const token = await createAccessToken({ id: userFound._id });
 
-    if (process.env.ENVIRONMENT === "local") {
-      res.cookie("token", token, {
-        sameSite: "lax",
-        httpOnly: true,
-      });
-    } else {
-      res.cookie("token", token, {
-        sameSite: "none",
-        secure: true,
-        httpOnly: true,
-      });
-    }
+    // Cookie con httpOnly
+    res.cookie("token", token, {
+      sameSite: process.env.ENVIRONMENT === "local" ? "lax" : "none",
+      secure: process.env.ENVIRONMENT !== "local",
+      httpOnly: true,
+    });
 
     const role = await Role.findOne({ role: roleAdmin });
-    const isAdmin = userFound.role?.toString() === role?._id?.toString();
+    const isAdmin = role && userFound.role.toString() === role._id.toString();
 
     res.json({
       id: userFound._id,
       username: userFound.username,
       email: userFound.email,
-      isAdmin: isAdmin
+      isAdmin
     });
   } catch (error) {
     console.log(error);
@@ -113,7 +105,6 @@ export const logout = (req, res) => {
 // Perfil del usuario autenticado
 export const profile = async (req, res) => {
   const userFound = await User.findById(req.user.id);
-
   if (!userFound)
     return res.status(400).json({ message: ["Usuario no encontrado"] });
 
@@ -127,27 +118,23 @@ export const profile = async (req, res) => {
 // Verificación del token
 export const verifyToken = async (req, res) => {
   const { token } = req.cookies;
-  if (!token) {
-    return res.status(401).json({ message: ["No autorizado"] });
-  }
+  if (!token) return res.status(401).json({ message: ["No autorizado"] });
 
   jwt.verify(token, TOKEN_SECRET, async (err, user) => {
-    if (err) {
-      return res.status(401).json({ message: ["No autorizado"] });
-    }
+    if (err) return res.status(401).json({ message: ["No autorizado"] });
 
     const userFound = await User.findById(user.id);
     if (!userFound)
       return res.status(401).json({ message: ["No autorizado"] });
 
     const role = await Role.findOne({ role: roleAdmin });
-    const isAdmin = userFound.role?.toString() === role?._id?.toString();
+    const isAdmin = role && userFound.role.toString() === role._id.toString();
 
     return res.json({
       id: userFound._id,
       username: userFound.username,
       email: userFound.email,
-      isAdmin: isAdmin
+      isAdmin
     });
   });
 };
