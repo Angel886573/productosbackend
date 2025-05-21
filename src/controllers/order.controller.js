@@ -14,16 +14,18 @@ export const createOrder = async (req, res) => {
       totalProducts,
     } = req.body;
 
-    // Verificar que shippingAddress contenga los campos necesarios
-    if (
-      !shippingAddress ||
-      !shippingAddress.name ||
-      !shippingAddress.address ||
-      !shippingAddress.phone
-    ) {
-      return res.status(400).json({
-        message: ['Faltan datos del envío: nombre, dirección o teléfono.'],
-      });
+    // ✅ Solo validamos dirección si el método no es 'pickup'
+    if (paymentMethod !== "pickup") {
+      if (
+        !shippingAddress ||
+        !shippingAddress.name ||
+        !shippingAddress.address ||
+        !shippingAddress.phone
+      ) {
+        return res.status(400).json({
+          message: ['Faltan datos del envío: nombre, dirección o teléfono.'],
+        });
+      }
     }
 
     console.log("Dirección de envío:", shippingAddress);
