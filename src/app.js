@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
-
+// Forzando redeploy para aplicar cambio de contraseña admin
 //Importamos las rutas para usuarios
 import authRoutes from './routes/auth.routes.js';
 //Importamos las rutas para productos
