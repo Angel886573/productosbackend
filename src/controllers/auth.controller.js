@@ -1,3 +1,4 @@
+//Importamos el modelo de datos
 import User from "../models/user.models.js";
 import bcryptjs from "bcryptjs";
 import { createAccessToken } from "../libs/jwt.js";
@@ -75,13 +76,10 @@ export const login = async (req, res) => {
       httpOnly: true,
     });
 
-    const role = await Role.findOne({ role: roleAdmin });
-
-    // Logs de depuración
-    console.log("LOGIN — userFound.role:", userFound.role?.toString());
-    console.log("LOGIN — role._id (admin):", role?._id?.toString());
-
-    const isAdmin = role && userFound.role?.toString() === role._id?.toString();
+    const roleAdminDoc = await Role.findOne({ role: roleAdmin });
+    const isAdmin =
+      roleAdminDoc &&
+      userFound.role?.toString() === roleAdminDoc._id.toString();
 
     res.json({
       id: userFound._id,
@@ -90,7 +88,7 @@ export const login = async (req, res) => {
       isAdmin
     });
   } catch (error) {
-    console.log(error);
+    console.log("Error en login:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -129,13 +127,10 @@ export const verifyToken = async (req, res) => {
     if (!userFound)
       return res.status(401).json({ message: ["No autorizado"] });
 
-    const role = await Role.findOne({ role: roleAdmin });
-
-    // Logs de depuración
-    console.log("VERIFY — userFound.role:", userFound.role?.toString());
-    console.log("VERIFY — role._id (admin):", role?._id?.toString());
-
-    const isAdmin = role && userFound.role?.toString() === role._id?.toString();
+    const roleAdminDoc = await Role.findOne({ role: roleAdmin });
+    const isAdmin =
+      roleAdminDoc &&
+      userFound.role?.toString() === roleAdminDoc._id.toString();
 
     return res.json({
       id: userFound._id,
@@ -145,4 +140,3 @@ export const verifyToken = async (req, res) => {
     });
   });
 };
-
