@@ -1,43 +1,42 @@
-// initializeSetup.js
-
 import Role from '../models/roles.models.js';
 import User from '../models/user.models.js';
 import bcryptjs from 'bcryptjs';
 import dotenv from 'dotenv';
 
-dotenv.config();
-
 export const initializeSetup = async () => {
   try {
+    dotenv.config();
+
     const roleAdmin = process.env.SETUP_ROLE_ADMIN;
     const roleUser = process.env.SETUP_ROLE_USER;
 
-    // Crear rol de usuario si no existe
-    const userRoleExists = await Role.findOne({ role: roleUser });
-    if (!userRoleExists) {
-      await new Role({ role: roleUser }).save();
-      console.log("✅ Rol USER creado");
+    if (!roleAdmin || !roleUser) {
+      throw new Error("Las variables de entorno SETUP_ROLE_ADMIN y/o SETUP_ROLE_USER no están definidas.");
     }
 
-    // Crear rol de admin si no existe
-    const adminRoleExists = await Role.findOne({ role: roleAdmin });
-    if (!adminRoleExists) {
-      await new Role({ role: roleAdmin }).save();
-      console.log("✅ Rol ADMIN creado");
+    const countRoles = await Role.estimatedDocumentCount();
+    if (countRoles === 0) {
+      await Promise.all([
+        new Role({ role: roleUser }).save(),
+        new Role({ role: roleAdmin }).save()
+      ]);
+      console.log("Roles creados correctamente");
     }
 
     const setupAdminName = process.env.SETUP_ADMIN_USERNAME;
     const setupPwd = process.env.SETUP_ADMIN_PWD;
     const setupEmail = process.env.SETUP_ADMIN_EMAIL;
 
-    const adminUserExists = await User.findOne({ email: setupEmail });
+    if (!setupAdminName || !setupPwd || !setupEmail) {
+      throw new Error("Las variables de entorno del usuario administrador están incompletas.");
+    }
 
-    if (!adminUserExists) {
+    const userAdmin = await User.findOne({ email: setupEmail });
+    if (!userAdmin) {
       const roleAdminDoc = await Role.findOne({ role: roleAdmin });
 
       if (!roleAdminDoc) {
-        console.error("❌ Error: El rol 'admin' no se encontró en la base de datos.");
-        return;
+        throw new Error("No se encontró el rol de administrador en la base de datos.");
       }
 
       const passwordAdmin = await bcryptjs.hash(setupPwd, 10);
@@ -49,11 +48,12 @@ export const initializeSetup = async () => {
       });
 
       await newUserAdmin.save();
-      console.log("✅ Usuario administrador creado correctamente");
+      console.log("Usuario administrador creado correctamente");
     } else {
-      console.log("ℹ️ El usuario administrador ya existe");
+      console.log("El usuario administrador ya existe");
     }
+
   } catch (error) {
-    console.error("❌ Error inicializando el setup:", error.message);
+    console.error(" Error inicializando el setup:", error.message);
   }
 };
