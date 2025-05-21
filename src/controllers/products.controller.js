@@ -1,170 +1,163 @@
-import Products from '../models/products.models.js';
-import cloudinary from 'cloudinary';
+import Product from '../models/products.models.js';
+import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs-extra';
 
-
-
-// Obtener todos los productos
+// Obtener productos (para usuarios autenticados)
 export const getProducts = async (req, res) => {
-    try {
-        const products = await Products.find({ user: req.user.id }).populate('user');
-        res.json(products);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: ['Error al obtener los productos'] });
-    }
-};
-
-// Crear un producto
-export const createProduct = async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(500).json({ message: ['Error al crear un producto, no se encontró la imagen'] });
-        }
-
-        const image = req.file;
-        const base64Image = Buffer.from(image.buffer).toString("base64");
-        const dataUri = `data:${image.mimetype};base64,${base64Image}`;
-
-        const uploadResponse = await cloudinary.v2.uploader.upload(dataUri);
-
-        const { name, price, quantity } = req.body;
-        const newProduct = new Products({
-            name,
-            price,
-            quantity,
-            image: uploadResponse.url,
-            user: req.user.id
-        });
-
-        const savedProduct = await newProduct.save();
-        res.json(savedProduct);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: ['Error al crear un producto'] });
-    }
-};
-
-// Obtener un producto por ID
-export const getProduct = async (req, res) => {
-    try {
-        const product = await Products.findById(req.params.id).populate('user');
-        if (!product) {
-            return res.status(404).json({ message: ['Producto no encontrado'] });
-        }
-        res.json(product);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: ['Error al obtener un producto'] });
-    }
-};
-
-// Eliminar un producto
-export const deleteProduct = async (req, res) => {
-    try {
-        const product = await Products.findByIdAndDelete(req.params.id);
-
-        if (!product) {
-            return res.status(404).json({ message: ['Producto no encontrado'] });
-        }
-
-        // Eliminar imagen de Cloudinary
-        const imageUrl = product.image;
-        const urlArray = imageUrl.split('/');
-        const image = urlArray[urlArray.length - 1];
-        const imageName = image.split('.')[0];
-
-        const result = await cloudinary.v2.uploader.destroy(imageName);
-
-        if (result.result === 'ok' || result.result === 'not found') {
-            return res.json(product);
-        } else {
-            return res.status(500).json({ message: ['Error al eliminar la imagen de un producto'] });
-        }
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: ['Error al eliminar un producto'] });
-    }
-};
-
-// Actualizar un producto SIN cambiar la imagen
-export const updateProduct = async (req, res) => {
-    try {
-        const product = await Products.findById(req.params.id);
-        if (!product) {
-            return res.status(404).json({ message: ['Producto no encontrado'] });
-        }
-
-        const dataProduct = {
-            name: req.body.name,
-            price: req.body.price,
-            quantity: req.body.quantity,
-            image: req.body.image,
-            user: req.user.id
-        };
-
-        const updatedProduct = await Products.findByIdAndUpdate(req.params.id, dataProduct, { new: true });
-        res.json(updatedProduct);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: ['Error al actualizar un producto'] });
-    }
-};
-
-// Actualizar un producto Y actualizar la imagen en Cloudinary
-export const updateProductWithImage = async (req, res) => {
-    try {
-        // Verificar si el producto existe
-        const product = await Products.findById(req.params.id);
-        if (!product) {
-            return res.status(404).json({ message: ['Producto no encontrado'] });
-        }
-
-        // Verificar que venga una nueva imagen
-        if (!req.file) {
-            return res.status(400).json({ message: ['No se encontró una nueva imagen'] });
-        }
-
-        // Eliminar imagen anterior de Cloudinary
-        const imageUrl = product.image;
-        const urlArray = imageUrl.split('/');
-        const image = urlArray[urlArray.length - 1];
-        const imageName = image.split('.')[0]; // separar por punto para quitar extensión
-
-        await cloudinary.v2.uploader.destroy(imageName);
-
-        // Subir la nueva imagen
-        const imageFile = req.file;
-        const base64Image = Buffer.from(imageFile.buffer).toString("base64");
-        const dataUri = `data:${imageFile.mimetype};base64,${base64Image}`;
-
-        const uploadResponse = await cloudinary.v2.uploader.upload(dataUri);
-
-        // Actualizar el producto con la nueva URL de imagen
-        const dataProduct = {
-            name: req.body.name,
-            price: req.body.price,
-            quantity: req.body.quantity,
-            image: uploadResponse.url,
-            user: req.user.id
-        };
-
-        const updatedProduct = await Products.findByIdAndUpdate(req.params.id, dataProduct, { new: true });
-        res.json({ message: 'Producto actualizado con nueva imagen', updatedProduct });
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: ['Error al actualizar un producto'] });
-    }
-
-} //Fin de updateProduct
-
-//Funcion para obtener todos los productos para la compra de productos
-export const getAllProducts = async (req, res) => {
   try {
-    const products = await Products.find();
+    const products = await Product.find().sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
-    res.status(500).json({ message: ['Error al obtener productos'] });
+    console.log(error);
+    res.status(500).json({ message: ['Error al obtener los productos'] });
   }
-}//Fin del getAllProducts
+};
+
+// Obtener todos los productos (para clientes sin filtros)
+export const getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    res.json(products);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: ['Error al obtener todos los productos'] });
+  }
+};
+
+// Obtener producto por ID
+export const getProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product)
+      return res.status(404).json({ message: ['Producto no encontrado'] });
+    res.json(product);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: ['Error al obtener el producto'] });
+  }
+};
+
+// Crear producto
+export const createProduct = async (req, res) => {
+  try {
+    console.log('REQ.USER:', req.user); // útil para depuración
+
+    const { name, description = '', price, quantity } = req.body;
+
+    const newProduct = new Product({
+      name,
+      description,
+      price,
+      quantity,
+      user: req.user.id 
+    });
+
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'products' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+
+      newProduct.image = {
+        url: result.secure_url,
+        public_id: result.public_id
+      };
+    }
+
+    const savedProduct = await newProduct.save();
+    res.status(201).json(savedProduct);
+  } catch (error) {
+    console.error('Error al crear el producto:', error);
+    res.status(500).json({ message: ['Error al crear el producto'] });
+  }
+};
+
+// Actualizar producto
+export const updateProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product)
+      return res.status(404).json({ message: ['Producto no encontrado'] });
+
+    const { name, description, price, quantity } = req.body;
+
+    product.name = name || product.name;
+    product.description = description || product.description;
+    product.price = price || product.price;
+    product.quantity = quantity || product.quantity;
+
+    const updatedProduct = await product.save();
+    res.json(updatedProduct);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: ['Error al actualizar el producto'] });
+  }
+};
+
+// Actualizar producto con imagen
+export const updateProductWithImage = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product)
+      return res.status(404).json({ message: ['Producto no encontrado'] });
+
+    const { name, description, price, quantity } = req.body;
+
+    product.name = name || product.name;
+    product.description = description || product.description;
+    product.price = price || product.price;
+    product.quantity = quantity || product.quantity;
+
+    if (product.image?.public_id) {
+      await cloudinary.uploader.destroy(product.image.public_id);
+    }
+
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'products' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+
+      product.image = {
+        url: result.secure_url,
+        public_id: result.public_id
+      };
+    }
+
+    const updatedProduct = await product.save();
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error('Error al actualizar producto con imagen:', error);
+    res.status(500).json({ message: ['Error al actualizar producto con imagen'] });
+  }
+};
+
+// Eliminar producto
+export const deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product)
+      return res.status(404).json({ message: ['Producto no encontrado'] });
+
+    if (product.image?.public_id) {
+      await cloudinary.uploader.destroy(product.image.public_id);
+    }
+
+    res.json({ message: 'Producto eliminado correctamente' });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: ['Error al eliminar el producto'] });
+  }
+};
